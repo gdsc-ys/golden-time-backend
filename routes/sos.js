@@ -44,7 +44,7 @@ router.post("/", (req, res) => {
 
     // Send push notification
     // The topic name can be optionally prefixed with "/topics/".
-    const topic = "sos";
+    const topic = "SOS";
 
     const message = {
       data: {
