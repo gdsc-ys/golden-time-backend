@@ -74,7 +74,7 @@ router.post("/", (req, res) => {
 
         const message = {
           data: {
-            sosId: String(newSosId)
+            sosId: String(newSosId),
           },
           topic: topic,
         };
@@ -102,7 +102,31 @@ router.post("/", (req, res) => {
 });
 
 router.get("/:sos_id", (req, res) => {
-  res.send(req.params);
+  var sql =
+    "select patient_location, name, birth_date, height, weight, blood_type, allergies, medications, medical_notes, diseases from sos inner join users on sos.patient_id = users.id where sos.id = ?";
+  var datas = [req.params.sos_id];
+  db.query(sql, datas, function (err, result) {
+    if (err) {
+      res.status(400).json({
+        message: "MySQL error: " + err.message,
+      });
+      return;
+    }
+    res.status(200).json({
+      patient: {
+        name: result[0].name,
+        birthDate: result[0].birth_date,
+        height: result[0].height,
+        weight: result[0].weight,
+        bloodType: result[0].blood_type,
+        allergies: result[0].allergies,
+        medications: result[0].medications,
+        medicalNotes: result[0].medical_notes,
+        diseases: result[0].diseases
+      },
+      location: result[0].patient_location
+    });
+  });
 });
 
 module.exports = router;
