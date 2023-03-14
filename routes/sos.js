@@ -41,7 +41,7 @@ router.post("/", (req, res) => {
       usr.allergies,
       usr.medications,
       usr.medicalNotes,
-      usr.diseases,
+      usr.diseases.join(","),
     ];
     db.query(sql, datas, function (err, result) {
       if (err) {
@@ -122,9 +122,179 @@ router.get("/:sos_id", (req, res) => {
         allergies: result[0].allergies,
         medications: result[0].medications,
         medicalNotes: result[0].medical_notes,
-        diseases: result[0].diseases
+        diseases: result[0].diseases.split(",").map(Number),
       },
-      location: result[0].patient_location
+      location: result[0].patient_location,
+    });
+  });
+});
+
+function distance(loc1, loc2) {
+  // Reference:
+  // https://cloud.google.com/blog/products/maps-platform/how-calculate-distances-map-maps-javascript-api?hl=en
+  var loc1n = loc1.split(",").map(Number);
+  var loc2n = loc2.split(",").map(Number);
+  var lat1 = (loc1n[0] * Math.PI) / 180,
+    lat2 = (loc2n[0] * Math.PI) / 180;
+  var diffLat = lat1 - lat2;
+  var lng1 = (loc1n[1] * Math.PI) / 180,
+    lng2 = (loc2n[1] * Math.PI) / 180;
+  var diffLng = lng1 - lng2;
+
+  var R = 6371.071; // Use kilometers
+  var d =
+    2 *
+    R *
+    Math.asin(
+      Math.sqrt(
+        Math.sin(diffLat / 2) * Math.sin(diffLat / 2) +
+          Math.cos(lat1) *
+            Math.cos(lat2) *
+            Math.sin(diffLng / 2) *
+            Math.sin(diffLng / 2)
+      )
+    );
+  return d;
+}
+
+router.post("/:sos_id/rescuer/location", (req, res) => {
+  var reqs = [];
+  if (!req.body.location) reqs.push("location");
+  if (reqs.length) {
+    res.status(400).json({
+      message: "No " + reqs.join(", ") + " specified.",
+    });
+    return;
+  }
+
+  var sql =
+    "select patient_location, closest_rescuer_location from sos where id=?";
+  var datas = [req.params.sos_id];
+  db.query(sql, datas, function (err, result) {
+    if (err) {
+      res.status(400).json({
+        message: "MySQL error: " + err.message,
+      });
+      return;
+    }
+    var patLoc = result[0].patient_location;
+    var curLoc = result[0].closest_rescuer_location;
+    var newLoc = req.body.location;
+    if (
+      curLoc === null ||
+      distance(patLoc, curLoc) > distance(patLoc, newLoc)
+    ) {
+      var sql = "update sos set closest_rescuer_location=? where id=?";
+      var datas = [newLoc, req.params.sos_id];
+      db.query(sql, datas, function (err, result) {
+        if (err) {
+          res.status(400).json({
+            message: "MySQL error: " + err.message,
+          });
+          return;
+        }
+        res.status(200).json({
+          message: "Succeeded!",
+        });
+        return;
+      });
+    }
+  });
+});
+
+router.post("/:sos_id/rescuer/accept", (req, res) => {
+  var sql = "update sos set rescuers_num = rescuers_num + 1 where id=?";
+  var datas = [req.params.sos_id];
+  db.query(sql, datas, function (err, result) {
+    if (err) {
+      res.status(400).json({
+        message: "MySQL error: " + err.message,
+      });
+      return;
+    }
+    res.status(200).json({
+      message: "Succeeded!",
+    });
+  });
+});
+
+router.post("/:sos_id/rescuer/arrived", (req, res) => {
+  var sql = "select arrived_rescuers_num from sos where id=?";
+  var datas = [req.params.sos_id];
+  db.query(sql, datas, function (err, result) {
+    if (err) {
+      res.status(400).json({
+        message: "MySQL error: " + err.message,
+      });
+      return;
+    }
+    if (result[0].arrived_rescuers_num == 0) {
+      var sql = "update sos set time_first_arrival = now() where id=?";
+      var datas = [req.params.sos_id];
+      db.query(sql, datas, function (err, result) {
+        if (err) {
+          res.status(400).json({
+            message: "MySQL error: " + err.message,
+          });
+          return;
+        }
+      });
+    }
+    var sql =
+      "update sos set arrived_rescuers_num = arrived_rescuers_num + 1 where id=?";
+    var datas = [req.params.sos_id];
+    db.query(sql, datas, function (err, result) {
+      if (err) {
+        res.status(400).json({
+          message: "MySQL error: " + err.message,
+        });
+        return;
+      }
+      res.status(200).json({
+        message: "Succeeded!",
+      });
+    });
+  });
+});
+
+router.post("/:sos_id/done", (req, res) => {
+  var sql = "update sos set done=1 where id=?";
+  var datas = [req.params.sos_id];
+  db.query(sql, datas, function (err, result) {
+    if (err) {
+      res.status(400).json({
+        message: "MySQL error: " + err.message,
+      });
+      return;
+    }
+    res.status(200).json({
+      message: "Succeeded!",
+    });
+  });
+});
+
+router.get("/:sos_id/rescuers", (req, res) => {
+  var sql =
+    "select rescuers_num, patient_location, closest_rescuer_location, done from sos where id=?";
+  var datas = [req.params.sos_id];
+  db.query(sql, datas, function (err, result) {
+    if (err) {
+      res.status(400).json({
+        message: "MySQL error: " + err.message,
+      });
+      return;
+    }
+    res.status(200).json({
+      message: "Succeeded!",
+      rescuerNum: result[0].rescuers_num,
+      closestRescuerDistance:
+        result[0].closest_rescuer_location === null
+          ? -111111
+          : distance(
+              result[0].patient_location,
+              result[0].closest_rescuer_location
+            ),
+      done: result[0].done === 0 ? false : true,
     });
   });
 });
