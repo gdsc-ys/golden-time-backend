@@ -13,6 +13,7 @@ router.get("/", (req, res) => {
     }
 
     result.map((x) => {
+      x.symptoms = x.symptoms.split(',');
       x.manual = JSON.parse(x.manual);
     });
 
@@ -31,7 +32,8 @@ router.get("/:case_id", (req, res) => {
         });
         return;
       }
-  
+
+      result[0].symptoms = result[0].symptoms.split(',');
       result[0].manual = JSON.parse(result[0].manual);
   
       res.status(200).json(result[0]);
