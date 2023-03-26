@@ -114,7 +114,7 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` tinytext COLLATE utf8mb3_unicode_ci NOT NULL,
-  `birth_date` date DEFAULT NULL,
+  `birth_date` tinytext COLLATE utf8mb3_unicode_ci,
   `height` double DEFAULT NULL,
   `weight` double DEFAULT NULL,
   `blood_type` tinytext COLLATE utf8mb3_unicode_ci,
@@ -153,4 +153,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-03-23  0:37:11
+-- Dump completed on 2023-03-26 14:48:41
