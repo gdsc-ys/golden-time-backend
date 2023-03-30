@@ -7,25 +7,33 @@ router.get("/", async function (req, res) {
   if (req.query.ids !== undefined) {
     sql += " where id in (" + req.query.ids + ")";
   }
-
   try {
     await db.query(sql, async function (err, results) {
       if (err) throw err;
       var promises = [];
       results.forEach((elem, i) => {
-        promises.push(
-          new Promise((resolve, reject) => {
-            var sql2 =
-              "select id, title, subtitle from `case` where id in (" +
-              elem.case_ids +
-              ")";
-            delete results[i].case_ids;
-            db.query(sql2, function (err, result2) {
-              if (err) throw err;
-              resolve({ ...results[i], cases: result2 });
-            });
-          })
-        );
+        if (elem.case_ids === "") {
+          delete results[i].case_ids;
+          promises.push(
+            new Promise((resolve, reject) => {
+              resolve({ ...results[i], cases: [] });
+            })
+          );
+        } else {
+          promises.push(
+            new Promise((resolve, reject) => {
+              var sql2 =
+                "select id, title, subtitle from `case` where id in (" +
+                elem.case_ids +
+                ")";
+              delete results[i].case_ids;
+              db.query(sql2, function (err, result2) {
+                if (err) throw err;
+                resolve({ ...results[i], cases: result2 });
+              });
+            })
+          );
+        }
       });
 
       Promise.all(promises).then((x) => {
@@ -63,27 +71,36 @@ router.get("/:disease_id", async function (req, res) {
       });
     }
 
-    proc().then((x) => {
-      res.status(200).json(x);
-    });
+    if (result[0].case_ids === "") {
+      delete result[0].case_ids;
+      res.status(200).json({
+        ...result[0],
+        case: [],
+      });
+    } else {
+      proc().then((x) => {
+        res.status(200).json(x);
+      });
+    }
   });
 });
 
-router.get("/:disease_id/manual", function (req, res) {
-  var sql =
-    "select content from disease inner join manual on disease.manual_id = manual.id where disease.id = ?";
-  var datas = [req.params.disease_id];
-  db.query(sql, datas, function (err, result) {
-    if (err) {
-      res.status(400).json({
-        message: "MySQL error: " + err.message,
-      });
-      return;
-    }
-    res.status(200).json({
-      manual: JSON.parse(result[0].content),
-    });
-  });
-});
+// DEPRECATED
+// router.get("/:disease_id/manual", function (req, res) {
+//   var sql =
+//     "select content from disease inner join manual on disease.manual_id = manual.id where disease.id = ?";
+//   var datas = [req.params.disease_id];
+//   db.query(sql, datas, function (err, result) {
+//     if (err) {
+//       res.status(400).json({
+//         message: "MySQL error: " + err.message,
+//       });
+//       return;
+//     }
+//     res.status(200).json({
+//       manual: JSON.parse(result[0].content),
+//     });
+//   });
+// });
 
 module.exports = router;
