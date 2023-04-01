@@ -8,7 +8,7 @@
 This is our service Golden Time's backend repository which only contains content about backend logic. Please visit [Android for Golden Time](https://github.com/gdsc-ys/golden-time-android) to get more general information about our service. [Wear OS for Golden Time](https://github.com/gdsc-ys/golden-time-wearos) is also available. Or please refer our submission or introduction video to find out what we are looking for!
 
 ## API Base URL
-https://gdsc-next.com:3000 (Only during the competition!)
+http://gdsc-next.com:3000 (Only during the competition!)
 
 We strongly recommend to clone and run this locally to prevent unexpected problem during the competition.
 
